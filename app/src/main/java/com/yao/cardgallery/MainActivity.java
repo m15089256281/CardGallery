@@ -14,7 +14,7 @@ public class MainActivity extends AppCompatActivity {
 
         cardGallery = (CardGallery) findViewById(R.id.card_gallery);
 
-        cardGallery.setAdapter(new CardGallery.Adapter(cardGallery, new PicAdapter()));
+        cardGallery.setAdapter(new PicAdapter());
 
     }
 }
