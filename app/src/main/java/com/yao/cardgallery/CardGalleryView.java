@@ -1,12 +1,9 @@
 package com.yao.cardgallery;
 
-import android.app.Activity;
 import android.content.Context;
-import android.support.annotation.NonNull;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.AttributeSet;
-import android.util.DisplayMetrics;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -14,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by Yao on 2016/10/29 0029.
+ * Created by Yao
  */
 
 public class CardGalleryView extends RecyclerView {
@@ -27,6 +24,9 @@ public class CardGalleryView extends RecyclerView {
 
     //改变选中的监听器集合
     private List<OnPageChangedListener> mOnPageChangedListeners;
+
+    //缩放的系数
+    private int scaleMultiple = 10;
 
     public CardGalleryView(Context context) {
         super(context);
@@ -99,7 +99,6 @@ public class CardGalleryView extends RecyclerView {
      * @param adapter
      * @return
      */
-    @NonNull
     protected Adapter transformCardGalleryAdapter(RecyclerView.Adapter adapter) {
         return (adapter instanceof Adapter) ? (Adapter) adapter : new Adapter(this, adapter);
 
@@ -107,9 +106,8 @@ public class CardGalleryView extends RecyclerView {
 
 
     private void init() {
-
-        setHorizontalScrollBarEnabled(false);
-        setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
+        setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));//设置横向滚动
+        setHorizontalScrollBarEnabled(false);//隐藏滚动条
 
         //添加滚动监听
         addOnScrollListener(new RecyclerView.OnScrollListener() {
@@ -117,16 +115,16 @@ public class CardGalleryView extends RecyclerView {
             @Override
             public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
                 super.onScrollStateChanged(recyclerView, newState);
-                int newIndex = getItem4ScreenXMin();
                 if (newState == SCROLL_STATE_IDLE) {//停止滚动
-                    if (mOnPageChangedListeners != null) {
+                    int newIndex = getItem4ScreenXMin();//获取最靠近中线的Item索引
+                    if (mOnPageChangedListeners != null) {//触发监听器
                         for (OnPageChangedListener onPageChangedListener : mOnPageChangedListeners) {
                             if (onPageChangedListener != null) {
                                 onPageChangedListener.OnPageChanged(getActualCurrentIndex(), getChildAt(newIndex).getId());
                             }
                         }
                     }
-                    alignView(newIndex);
+                    alignView(newIndex);//Item对齐
                 }
             }
 
@@ -139,12 +137,13 @@ public class CardGalleryView extends RecyclerView {
                     int height = view.getHeight();
                     int width = view.getWidth();
                     int difference = Math.abs(screenX - getView4ScreenX(view));//item与recyclerView的距离
-                    int padding = difference / wrapperAdapter.getScaleMultiple();
+                    int padding = difference / scaleMultiple;
                     view.setPadding(padding, (int) (padding * (float) height / width), padding, (int) (padding * (float) height / width));
                     view.getLayoutParams().height = height;//保持item高度不变
                     view.requestLayout();
+                    //快速滚动时可能没有difference==0的情况，所以这里用difference <= 100来触发选中Item
                     if (difference <= 100) {
-                        if (mOnPageChangedListeners != null) {
+                        if (mOnPageChangedListeners != null) {//触发监听器
                             for (OnPageChangedListener onPageChangedListener : mOnPageChangedListeners) {
                                 if (onPageChangedListener != null) {
                                     onPageChangedListener.OnPageChanged(getActualCurrentIndex(), view.getId());
@@ -158,12 +157,20 @@ public class CardGalleryView extends RecyclerView {
         });
     }
 
+    public int getScaleMultiple() {
+        return scaleMultiple;
+    }
+
+    public void setScaleMultiple(int scaleMultiple) {
+        this.scaleMultiple = scaleMultiple;
+    }
+
     /**
      * 根据索引居中item
      *
      * @param newIndex
      */
-    public void alignView(int newIndex) {
+    private void alignView(int newIndex) {
         currentIndex = newIndex;
         alignView(getChildAt(newIndex));
     }
@@ -173,7 +180,7 @@ public class CardGalleryView extends RecyclerView {
      *
      * @param view
      */
-    public void alignView(View view) {
+    private void alignView(View view) {
         int dx = getView4ScreenX(CardGalleryView.this) - getView4ScreenX(view);
         smoothScrollBy(-dx, 0);
     }
@@ -192,7 +199,7 @@ public class CardGalleryView extends RecyclerView {
         return (getWrapperAdapter()).getActualItemCount();
     }
 
-    public int getMiddlePosition() {
+    private int getMiddlePosition() {
         int middlePosition = Integer.MAX_VALUE / 2;
         final int actualItemCount = getActualItemCountFromAdapter();
         if (actualItemCount > 0 && middlePosition % actualItemCount != 0) {
@@ -206,7 +213,7 @@ public class CardGalleryView extends RecyclerView {
      *
      * @return
      */
-    public int getItem4ScreenXMin() {
+    private int getItem4ScreenXMin() {
         int screenX = getView4ScreenX(this);
         int min = 10086;
         int item = 0;
@@ -226,7 +233,7 @@ public class CardGalleryView extends RecyclerView {
      * @param view
      * @return
      */
-    public int getView4ScreenX(View view) {
+    private int getView4ScreenX(View view) {
         int w = view.getWidth();
         int[] location = new int[2];
         view.getLocationOnScreen(location);
@@ -240,14 +247,13 @@ public class CardGalleryView extends RecyclerView {
         CardGalleryView cardGalleryView;
         View.OnClickListener onClickListener;//当前选中item的点击监听器
         int itemWidth;//item的宽度
-        int scaleMultiple = 10;//缩放的倍数
 
         public Adapter(final CardGalleryView cardGalleryView, RecyclerView.Adapter adapter) {
             this.adapter = adapter;
             this.cardGalleryView = cardGalleryView;
 
             //默认item宽度为RecyclerView的2/3
-            cardGalleryView.addOnLayoutChangeListener(new OnLayoutChangeListener() {
+            cardGalleryView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
                 @Override
                 public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
                     if (itemWidth == 0 && cardGalleryView.getWidth() != 0) {
@@ -267,33 +273,13 @@ public class CardGalleryView extends RecyclerView {
             this.itemWidth = itemWidth;
         }
 
-        public int getScaleMultiple() {
-            return scaleMultiple;
-        }
-
-        public void setScaleMultiple(int scaleMultiple) {
-            this.scaleMultiple = scaleMultiple;
-        }
-
-        public OnClickListener getOnClickListener() {
+        public View.OnClickListener getOnClickListener() {
             return onClickListener;
         }
 
-        public Adapter<VH> setOnClickListener(OnClickListener onClickListener) {
+        public Adapter<VH> setOnClickListener(View.OnClickListener onClickListener) {
             this.onClickListener = onClickListener;
             return this;
-        }
-
-        /**
-         * 获取屏幕宽度（像素）
-         *
-         * @param activity
-         * @return
-         */
-        private float getDisplayWidth(Activity activity) {
-            DisplayMetrics metric = new DisplayMetrics();
-            activity.getWindowManager().getDefaultDisplay().getMetrics(metric);
-            return metric.widthPixels;
         }
 
         @Override
