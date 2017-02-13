@@ -12,7 +12,7 @@ import android.widget.ImageView;
 
 public class PicAdapter extends RecyclerView.Adapter<PicAdapter.ViewHolder> {
 
-    int pics[] = new int[]{R.mipmap.pic_01, R.mipmap.pic_02, R.mipmap.pic_03, R.mipmap.pic_04, R.mipmap.pic_05, R.mipmap.pic_06, R.mipmap.pic_07, R.mipmap.pic_08, R.mipmap.pic_09, R.mipmap.pic_10};
+    int pics[] = new int[]{R.mipmap.pic_01, R.mipmap.pic_02, R.mipmap.pic_03, R.mipmap.pic_04};
 
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {

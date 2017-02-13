@@ -5,16 +5,16 @@ import android.support.v7.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
 
-    CardGallery cardGallery;
+    CardGalleryView cardGalleryView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        cardGallery = (CardGallery) findViewById(R.id.card_gallery);
+        cardGalleryView = (CardGalleryView) findViewById(R.id.card_gallery);
 
-        cardGallery.setAdapter(new PicAdapter());
+        cardGalleryView.setAdapter(new PicAdapter());
 
     }
 }

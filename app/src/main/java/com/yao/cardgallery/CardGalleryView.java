@@ -17,28 +17,28 @@ import java.util.List;
  * Created by Yao on 2016/10/29 0029.
  */
 
-public class CardGallery extends RecyclerView {
+public class CardGalleryView extends RecyclerView {
 
-    //CardGallery的适配器
+    //CardGalleryView适配器
     private Adapter<?> wrapperAdapter;
 
     //当前item的索引
     private int currentIndex = 0;
 
-    //改变选中的监听器的集合
+    //改变选中的监听器集合
     private List<OnPageChangedListener> mOnPageChangedListeners;
 
-    public CardGallery(Context context) {
+    public CardGalleryView(Context context) {
         super(context);
         init();
     }
 
-    public CardGallery(Context context, AttributeSet attrs) {
+    public CardGalleryView(Context context, AttributeSet attrs) {
         super(context, attrs);
         init();
     }
 
-    public CardGallery(Context context, AttributeSet attrs, int defStyle) {
+    public CardGalleryView(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
         init();
     }
@@ -122,7 +122,7 @@ public class CardGallery extends RecyclerView {
                     if (mOnPageChangedListeners != null) {
                         for (OnPageChangedListener onPageChangedListener : mOnPageChangedListeners) {
                             if (onPageChangedListener != null) {
-                                onPageChangedListener.OnPageChanged(getCurrentItemId(), getChildAt(newIndex).getId());
+                                onPageChangedListener.OnPageChanged(getActualCurrentIndex(), getChildAt(newIndex).getId());
                             }
                         }
                     }
@@ -133,23 +133,21 @@ public class CardGallery extends RecyclerView {
             @Override
             public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
                 super.onScrolled(recyclerView, dx, dy);
-                int centreW = getView4ScreenX(CardGallery.this);
+                int screenX = getView4ScreenX(CardGalleryView.this);
                 for (int i = 0; i < getChildCount(); i++) {
                     View view = getChildAt(i);
                     int height = view.getHeight();
-                    int difference = Math.abs(centreW - getView4ScreenX(view));
-                    difference = difference > centreW ? centreW : difference;
-                    int padding = difference / 5;
-                    view.setPadding(padding, padding, padding, padding);
-                    if (height != 0) {
-                        view.getLayoutParams().height = height;
-                        view.setLayoutParams(view.getLayoutParams());
-                    }
+                    int width = view.getWidth();
+                    int difference = Math.abs(screenX - getView4ScreenX(view));//item与recyclerView的距离
+                    int padding = difference / wrapperAdapter.getScaleMultiple();
+                    view.setPadding(padding, (int) (padding * (float) height / width), padding, (int) (padding * (float) height / width));
+                    view.getLayoutParams().height = height;//保持item高度不变
+                    view.requestLayout();
                     if (difference <= 100) {
                         if (mOnPageChangedListeners != null) {
                             for (OnPageChangedListener onPageChangedListener : mOnPageChangedListeners) {
                                 if (onPageChangedListener != null) {
-                                    onPageChangedListener.OnPageChanged(getCurrentItemId(), view.getId());
+                                    onPageChangedListener.OnPageChanged(getActualCurrentIndex(), view.getId());
                                 }
                             }
                         }
@@ -176,12 +174,12 @@ public class CardGallery extends RecyclerView {
      * @param view
      */
     public void alignView(View view) {
-        int dx = getView4ScreenX(CardGallery.this) - getView4ScreenX(view);
+        int dx = getView4ScreenX(CardGalleryView.this) - getView4ScreenX(view);
         smoothScrollBy(-dx, 0);
     }
 
-
-    public int getCurrentItemId() {
+    //获取当前item真实索引
+    public int getActualCurrentIndex() {
         return getChildAt(currentIndex).getId();
     }
 
@@ -239,22 +237,42 @@ public class CardGallery extends RecyclerView {
     public static class Adapter<VH extends RecyclerView.ViewHolder> extends RecyclerView.Adapter<VH> implements View.OnClickListener {
 
         RecyclerView.Adapter<VH> adapter;
-        CardGallery cardGallery;
+        CardGalleryView cardGalleryView;
         View.OnClickListener onClickListener;//当前选中item的点击监听器
-        int currentItemWidth;//选中item时的宽度
+        int itemWidth;//item的宽度
+        int scaleMultiple = 10;//缩放的倍数
 
-        public Adapter(CardGallery cardGallery, RecyclerView.Adapter adapter) {
+        public Adapter(final CardGalleryView cardGalleryView, RecyclerView.Adapter adapter) {
             this.adapter = adapter;
-            this.cardGallery = cardGallery;
-            currentItemWidth = (int) (getDisplayWidth((Activity) cardGallery.getContext()) / 3f * 2);
+            this.cardGalleryView = cardGalleryView;
+
+            //默认item宽度为RecyclerView的2/3
+            cardGalleryView.addOnLayoutChangeListener(new OnLayoutChangeListener() {
+                @Override
+                public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
+                    if (itemWidth == 0 && cardGalleryView.getWidth() != 0) {
+                        itemWidth = (int) (cardGalleryView.getWidth() / 3f * 2);
+                        cardGalleryView.removeOnLayoutChangeListener(this);
+                        notifyDataSetChanged();
+                    }
+                }
+            });
         }
 
-        public int getCurrentItemWidth() {
-            return currentItemWidth;
+        public int getItemWidth() {
+            return itemWidth;
         }
 
-        public void setCurrentItemWidth(int currentItemWidth) {
-            this.currentItemWidth = currentItemWidth;
+        public void setItemWidth(int itemWidth) {
+            this.itemWidth = itemWidth;
+        }
+
+        public int getScaleMultiple() {
+            return scaleMultiple;
+        }
+
+        public void setScaleMultiple(int scaleMultiple) {
+            this.scaleMultiple = scaleMultiple;
         }
 
         public OnClickListener getOnClickListener() {
@@ -288,20 +306,17 @@ public class CardGallery extends RecyclerView {
         @Override
         public void onBindViewHolder(VH holder, int position) {
             adapter.onBindViewHolder(holder, getActualPosition(position));
-            final View itemView = holder.itemView;
             ViewGroup.LayoutParams lp;
-            if (itemView.getLayoutParams() == null) {
-                lp = new ViewGroup.LayoutParams(currentItemWidth, ViewGroup.LayoutParams.MATCH_PARENT);
+            int width = itemWidth == 0 ? ViewGroup.LayoutParams.MATCH_PARENT : itemWidth;
+            if (holder.itemView.getLayoutParams() == null) {
+                lp = new ViewGroup.LayoutParams(width, ViewGroup.LayoutParams.WRAP_CONTENT);
             } else {
-                lp = itemView.getLayoutParams();
-                if (cardGallery.getLayoutManager().canScrollHorizontally()) {
-                    lp.width = currentItemWidth;
-                } else {
-                    lp.height = ViewGroup.LayoutParams.MATCH_PARENT;
-                }
+                lp = holder.itemView.getLayoutParams();
+                lp.width = width;
+                lp.height = ViewGroup.LayoutParams.WRAP_CONTENT;
             }
-            itemView.setLayoutParams(lp);
-            itemView.setId(getActualPosition(position));
+            holder.itemView.setLayoutParams(lp);
+            holder.itemView.setId(getActualPosition(position));
         }
 
         @Override
@@ -341,10 +356,10 @@ public class CardGallery extends RecyclerView {
 
         @Override
         public void onClick(View v) {
-            if (v.getId() == cardGallery.getCurrentItemId()) {
+            if (v.getId() == cardGalleryView.getActualCurrentIndex()) {
                 if (onClickListener != null) onClickListener.onClick(v);
             } else {
-                cardGallery.alignView(v);
+                cardGalleryView.alignView(v);
             }
         }
     }
